@@ -37,8 +37,6 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
   const { businessName, googleReviewUrl, aiEnabled } = settings;
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [step, setStep] = useState<Step>("intro");
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
   const [review, setReview] = useState("");

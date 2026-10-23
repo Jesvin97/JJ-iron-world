@@ -79,17 +79,18 @@ test("consent is required to keep contact details and validation errors are show
 
 test("name and phone are optional up front and prefill private feedback", async ({ page }) => {
   await page.goto("/review");
-  await page.getByLabel("Name").fill("Asha");
-  await page.getByLabel("Phone number").fill("+91 98765 43210");
+  await page.locator("#intro-name").fill("Asha");
+  await page.locator("#intro-phone").fill("+91 98765 43210");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("radio", { name: /2 stars/ }).click();
   await page.getByRole("button", { name: "Tell the salon privately" }).click();
   await expect(page.getByLabel("Name (optional)")).toHaveValue("Asha");
-  await page.getByLabel(/may contact me/i).check();
-  await expect(page.getByLabel("Phone")).toHaveValue("+91 98765 43210");
+  const fb = page.getByRole("form", { name: "Private feedback" });
+  await fb.getByLabel(/may contact me/i).check();
+  await expect(fb.getByLabel("Phone")).toHaveValue("+91 98765 43210");
   // Google link is still present for a low rating
   await page.getByRole("button", { name: "I'll write it myself" }).click();
-  await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /continue to Google/i })).toBeVisible();
 });
 
 test("AI outage falls back to the customer's own words", async ({ page }) => {
@@ -173,6 +174,7 @@ test("services + consented contact details are saved for follow-up and passed to
   let aiBody: { services?: string[] } = {};
   await page.route("**/api/ai/suggest", (r) => { aiBody = r.request().postDataJSON(); return r.continue(); });
   await page.goto("/review?c=reception");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /2 stars/ }).click();
   await page.getByRole("button", { name: "Facial", exact: true }).click();
   await page.getByLabel("Describe your experience").fill("The facial room was cold and I waited a while.");
