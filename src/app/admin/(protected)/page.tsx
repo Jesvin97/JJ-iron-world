@@ -96,7 +96,7 @@ export default async function Overview({ searchParams }: { searchParams: Promise
               <li key={f.id}>
                 <Link href={`/admin/feedback/${f.id}`} className="block py-3 hover:bg-ivory">
                   <div className="flex items-center justify-between gap-2"><Stars n={f.rating} /><StatusBadge status={f.status} /></div>
-                  <p className="mt-1 line-clamp-2 text-sm">{f.originalText}</p>
+                  <p className="mt-1 line-clamp-2 text-sm">{f.originalText ?? "No message"}</p>
                   <p className="text-xs text-cocoa-soft">{fmtDate(f.createdAt)}</p>
                 </Link>
               </li>

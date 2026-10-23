@@ -69,6 +69,8 @@ model FeedbackSubmission {
   customerName   String?
   customerEmail  String?
   customerPhone  String?
+  /// Services the customer said they received (picked from a fixed list).
+  services       String[]       @default([])
   contactConsent Boolean        @default(false)
   status         FeedbackStatus @default(NEW)
   internalNotes  String?

@@ -24,7 +24,7 @@ export async function GET(req: Request) {
     include: { campaign: { select: { name: true } } },
   });
   const csv = toCsv(
-    ["id", "created_at", "rating", "status", "campaign", "feedback", "name", "contact_consent", "email", "phone", "internal_notes"],
+    ["id", "created_at", "rating", "status", "campaign", "feedback", "services", "name", "contact_consent", "email", "phone", "internal_notes"],
     rows.map((r) => [
       r.id,
       r.createdAt,
@@ -32,6 +32,7 @@ export async function GET(req: Request) {
       r.status,
       r.campaign?.name,
       r.originalText,
+      r.services.join('; '),
       r.customerName,
       r.contactConsent ? "yes" : "no",
       r.contactConsent ? r.customerEmail : "",

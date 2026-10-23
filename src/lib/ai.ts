@@ -42,9 +42,10 @@ export function scrubPersonalData(input: string): string {
     .trim();
 }
 
-export function buildUserMessage(opts: { businessName: string; rating: number; text: string; shorter?: boolean }) {
+export function buildUserMessage(opts: { businessName: string; rating: number; text: string; shorter?: boolean; services?: string[] }) {
   return [
     `Salon name: ${opts.businessName}`,
+    opts.services?.length ? `Services the customer says they received (you may mention these naturally, only these): ${opts.services.join(", ")}` : "",
     `Customer's own star rating: ${opts.rating}/5 (${RATING_LABELS[opts.rating]})`,
     opts.shorter ? "Make the main review brief (1-2 sentences)." : "",
     `<customer_input>\n${opts.text}\n</customer_input>`,
@@ -172,6 +173,7 @@ export async function suggestReview(opts: {
   rating: number;
   text: string;
   shorter?: boolean;
+  services?: string[];
 }): Promise<Suggestion> {
   if (!opts.cfg.enabled || opts.cfg.provider === "none") throw new AiUnavailableError("AI is disabled", "disabled");
 

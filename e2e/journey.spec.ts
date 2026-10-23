@@ -32,18 +32,17 @@ test("customer journey: rate → describe → AI suggestion → copy → Google 
   await box.fill(generated + " I would come again.");
   const finalText = await box.inputValue();
 
-  await page.getByRole("button", { name: "Copy review" }).click();
-  await expect(page.getByText("Review copied to your clipboard.")).toBeVisible();
-  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(finalText);
-
-  const link = page.getByRole("link", { name: /Continue to Google Reviews/ });
+  const link = page.getByRole("link", { name: /Copy my review .* continue to Google/i });
   await expect(link).toHaveAttribute("href", GOOGLE_URL);
   await expect(link).toHaveAttribute("target", "_blank");
   await expect(link).toHaveAttribute("rel", /noopener/);
   await expect(page.getByText(/does not.*post anything/i)).toBeVisible();
   await page.screenshot({ path: "test-results/03-review.png", fullPage: true });
+  // One tap copies the review, then opens Google.
   const [popup] = await Promise.all([page.waitForEvent("popup"), link.click()]);
   expect(popup.url()).toContain("search.google.com");
+  expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(finalText);
+  await expect(page.getByText("Review copied to your clipboard.")).toBeVisible();
   await noHorizontalScroll(page);
 });
 
@@ -51,7 +50,7 @@ test("a 1-star customer gets the same Google link and can also send private feed
   await page.goto("/review");
   await page.getByRole("radio", { name: /1 star/ }).click();
   await page.getByRole("button", { name: "I'll write it myself" }).click();
-  await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toHaveAttribute("href", GOOGLE_URL);
+  await expect(page.getByRole("link", { name: /continue to Google/i })).toHaveAttribute("href", GOOGLE_URL);
 
   // Low ratings get a prominent private-feedback prompt, in addition to (never instead of) the Google link.
   await expect(page.getByRole("heading", { name: /sorry it wasn/i })).toBeVisible();
@@ -60,7 +59,7 @@ test("a 1-star customer gets the same Google link and can also send private feed
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText(/private feedback has been sent/i)).toBeVisible();
   // Google link is still available after submitting feedback
-  await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /continue to Google/i })).toBeVisible();
 });
 
 test("consent is required to keep contact details and validation errors are shown", async ({ page }) => {
@@ -71,7 +70,7 @@ test("consent is required to keep contact details and validation errors are show
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText("Please write a short message")).toBeVisible();
   await page.getByLabel("Your feedback").fill("Average visit overall.");
-  await page.getByLabel(/may contact me/i).check();
+  await page.locator("form").getByLabel(/may contact me/i).check();
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText(/Add an email or phone/)).toBeVisible();
 });
@@ -84,7 +83,7 @@ test("AI outage falls back to the customer's own words", async ({ page }) => {
   await page.getByRole("button", { name: "Help me write my review" }).click();
   await expect(page.getByText(/Suggestions aren.t available right now/)).toBeVisible();
   await expect(page.getByLabel("Your review text")).toHaveValue("Lovely facial, very relaxing.");
-  await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /continue to Google/i })).toBeVisible();
 });
 
 test("too little detail asks for more instead of inventing content", async ({ page }) => {
@@ -105,7 +104,7 @@ test("clipboard failure is handled gracefully", async ({ page }) => {
   await page.getByRole("radio", { name: /5 stars/ }).click();
   await page.getByRole("button", { name: "I'll write it myself" }).click();
   await page.getByLabel("Your review text").fill("Great service.");
-  await page.getByRole("button", { name: "Copy review" }).click();
+  await page.getByRole("link", { name: /continue to Google/i }).click();
   await expect(page.getByText(/couldn.t copy automatically/)).toBeVisible();
 });
 
@@ -148,4 +147,24 @@ test("admin: sign in, see analytics and feedback, update status, QR + print card
   await page.getByLabel("Google review URL").fill("https://evil.example.com/x");
   await page.getByRole("button", { name: "Save settings" }).click();
   await expect(page.getByText(/official Google link/).first()).toBeVisible();
+});
+
+test("services + consented contact details are saved for follow-up and passed to the AI", async ({ page }) => {
+  let aiBody: { services?: string[] } = {};
+  await page.route("**/api/ai/suggest", (r) => { aiBody = r.request().postDataJSON(); return r.continue(); });
+  await page.goto("/review?c=reception");
+  await page.getByRole("radio", { name: /2 stars/ }).click();
+  await page.getByRole("button", { name: "Facial", exact: true }).click();
+  await page.getByLabel("Describe your experience").fill("The facial room was cold and I waited a while.");
+  await page.getByLabel(/salon may contact me/i).check();
+  await page.locator("#visit-name").fill("Asha");
+  await page.locator("#visit-phone").fill("+91 98765 43210");
+  await page.getByRole("button", { name: "Help me write my review" }).click();
+  await expect(page.getByLabel("Your review text")).toBeVisible();
+  expect(aiBody.services).toEqual(["Facial"]);
+  const visit = page.waitForResponse((r) => r.url().endsWith("/api/visits"));
+  const [popup] = await Promise.all([page.waitForEvent("popup"), page.getByRole("link", { name: /continue to Google/i }).click()]);
+  const vs = (await visit).status();
+  expect(vs, "visits status").toBe(201);
+  await popup.close();
 });
