@@ -13,6 +13,17 @@ enum FeedbackStatus {
   RESOLVED
 }
 
+/// Lifecycle of a public Google review that the team is tracking (logged manually; no Google API access).
+enum PublicReviewStatus {
+  NEW             // logged, nobody has looked at it yet
+  REPLY_DRAFTED   // a public reply is drafted but not yet posted
+  REPLIED         // public reply posted on Google
+  SUSPECTED_FAKE  // looks like a policy violation; evidence being gathered
+  REPORTED        // flagged to Google, waiting for their decision
+  REMOVED         // Google removed it
+  KEPT            // Google declined removal, or we decided to leave it
+}
+
 enum AdminRole {
   ADMIN  // full access
   VIEWER // read-only
@@ -95,4 +106,31 @@ model AdminUser {
   passwordHash String
   role         AdminRole @default(ADMIN)
   createdAt    DateTime  @default(now())
+}
+
+/// A review that already exists on the salon's Google Business Profile, logged by staff so the team can
+/// reply to it, or report it to Google if it breaks Google's review policies.
+model PublicReview {
+  id           String             @id @default(cuid())
+  reviewerName String?
+  rating       Int
+  /// What the reviewer wrote on Google (copied by staff).
+  reviewText   String?
+  /// When the review was posted on Google.
+  postedAt     DateTime
+  status       PublicReviewStatus @default(NEW)
+  /// Which policy it appears to break (spam, off-topic, conflict of interest, fake engagement...). Free text.
+  flagReason   String?
+  /// Draft or final public reply.
+  replyText    String?
+  /// Staff member responsible. Free text, no PII beyond a first name is needed.
+  assignee     String?
+  internalNotes String?
+  reportedAt   DateTime?
+  resolvedAt   DateTime?
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  @@index([status, postedAt])
+  @@index([rating])
 }

@@ -9,7 +9,7 @@ async function prepare() {
   execSync("npx prisma migrate deploy", { stdio: "pipe", env: { ...process.env, DATABASE_URL: E2E_DB } });
   const prisma = new PrismaClient({ datasources: { db: { url: E2E_DB } } });
   await prisma.$executeRawUnsafe(
-    'TRUNCATE "FeedbackSubmission","ReviewSession","Campaign","AdminUser","SalonSettings" RESTART IDENTITY CASCADE',
+    'TRUNCATE "PublicReview","FeedbackSubmission","ReviewSession","Campaign","AdminUser","SalonSettings" RESTART IDENTITY CASCADE',
   );
   await prisma.salonSettings.create({
     data: { id: "singleton", businessName: "Glam’more Premium Unisex Salon & Spa", googleReviewUrl: GOOGLE_URL, aiProvider: "mock" },

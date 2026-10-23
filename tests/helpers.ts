@@ -5,7 +5,7 @@ import { POST as login } from "@/app/api/admin/login/route";
 
 export async function resetDb() {
   await db.$executeRawUnsafe(
-    'TRUNCATE "FeedbackSubmission","ReviewSession","Campaign","AdminUser","SalonSettings" RESTART IDENTITY CASCADE',
+    'TRUNCATE "PublicReview","FeedbackSubmission","ReviewSession","Campaign","AdminUser","SalonSettings" RESTART IDENTITY CASCADE',
   );
   resetRateLimits();
 }

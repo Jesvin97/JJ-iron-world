@@ -20,4 +20,4 @@ npm test                        # needs Postgres: TEST_DATABASE_URL (default pos
 npm run build
 npm run test:e2e                # Playwright mobile journey; needs E2E_DATABASE_URL DB and a Chromium (E2E_CHROMIUM_PATH)
 ```
-Docs: [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (deploy, rollback, backup/restore).
+Docs: [`docs/VERCEL_DEMO.md`](docs/VERCEL_DEMO.md) (try it on Vercel; `/demo`), [`docs/REVIEW_POLICY.md`](docs/REVIEW_POLICY.md) (Google rules + negative/fake review process), [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) (deploy, rollback, backup/restore).

@@ -15,7 +15,8 @@ components (no shadcn CLI dependency). Tests: Vitest (unit + DB-backed API tests
 | `POST /api/ai/suggest` | AI suggestion (server-side provider call) |
 | `POST /api/feedback` | Private feedback |
 | `GET /api/public/settings` | Customer-safe settings only |
-| `/api/admin/*` | login, logout, feedback (list/get/patch/delete/export), settings, campaigns, stats, qr |
+| `/admin/reviews` | Tracker for reviews already on Google: assign, draft replies, flag/report suspected fakes (see `docs/REVIEW_POLICY.md`) |
+| `/api/admin/*` | login, logout, feedback (list/get/patch/delete/export), reviews (CRUD), settings, campaigns, stats, qr |
 
 ## Key decisions
 - **No review gating.** The Google link is returned by the same settings call for every visitor and rendered for every rating;

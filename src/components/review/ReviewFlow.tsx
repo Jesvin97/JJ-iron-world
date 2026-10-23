@@ -343,6 +343,20 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
         </section>
       )}
 
+      {step !== "rate" && rating > 0 && rating <= 3 && !feedbackSent && !showFeedback && (
+        <section className="card rise mt-5 text-center" aria-labelledby="sorry-heading">
+          <h2 id="sorry-heading" className="font-serif text-2xl">
+            We&rsquo;re sorry it wasn&rsquo;t perfect
+          </h2>
+          <p className="hint mt-1">
+            If you&rsquo;d like us to put things right, tell the team directly. Your Google review stays available to you either way.
+          </p>
+          <button type="button" className="btn-outline mt-4" onClick={() => setShowFeedback(true)}>
+            Tell the salon privately
+          </button>
+        </section>
+      )}
+
       {step !== "rate" && (
         <section className="mt-5 text-center">
           {feedbackSent ? (
