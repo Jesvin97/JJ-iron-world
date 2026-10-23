@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test";
 
 test("no horizontal scroll and tap targets are large enough at 360px", async ({ page }) => {
   await page.goto("/review");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /5 stars/ }).click();
   await page.getByLabel("Describe your experience").fill("Wonderful blow-dry and lovely team.");
   await page.getByRole("button", { name: "Help me write my review" }).click();

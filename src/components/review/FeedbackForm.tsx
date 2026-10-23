@@ -8,17 +8,19 @@ type Props = {
   sessionId: string | null;
   campaign: string | null;
   initialText: string;
+  initialName?: string;
+  initialPhone?: string;
   contactEmail: string | null;
   onClose: () => void;
   onSent: () => void;
 };
 
-export function FeedbackForm({ rating: initialRating, sessionId, campaign, initialText, onClose, onSent }: Props) {
+export function FeedbackForm({ rating: initialRating, sessionId, campaign, initialText, initialName = "", initialPhone = "", onClose, onSent }: Props) {
   const [rating, setRating] = useState(initialRating);
   const [text, setText] = useState(initialText);
-  const [name, setName] = useState("");
+  const [name, setName] = useState(initialName);
   const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initialPhone);
   const [consent, setConsent] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});

@@ -9,6 +9,7 @@ async function noHorizontalScroll(page: Page) {
 test("customer journey: rate → describe → AI suggestion → copy → Google link", async ({ page, context }) => {
   await context.route("https://search.google.com/**", (r) => r.fulfill({ status: 200, body: "google stub" }));
   await page.goto("/review?c=reception");
+  await page.getByRole("button", { name: "Skip" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toContainText("Glam");
   await page.screenshot({ path: "test-results/01-start.png", fullPage: true });
 
@@ -49,11 +50,11 @@ test("customer journey: rate → describe → AI suggestion → copy → Google 
 
 test("a 1-star customer gets the same Google link and can also send private feedback", async ({ page }) => {
   await page.goto("/review");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /1 star/ }).click();
   await page.getByRole("button", { name: "I'll write it myself" }).click();
   await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toHaveAttribute("href", GOOGLE_URL);
 
-  await page.getByRole("button", { name: /send feedback to the salon/i }).click();
   await page.getByLabel("Your feedback").fill("The appointment started 30 minutes late.");
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText(/private feedback has been sent/i)).toBeVisible();
@@ -63,9 +64,9 @@ test("a 1-star customer gets the same Google link and can also send private feed
 
 test("consent is required to keep contact details and validation errors are shown", async ({ page }) => {
   await page.goto("/review");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /3 stars/ }).click();
   await page.getByRole("button", { name: "I'll write it myself" }).click();
-  await page.getByRole("button", { name: /send feedback to the salon/i }).click();
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText("Please write a short message")).toBeVisible();
   await page.getByLabel("Your feedback").fill("Average visit overall.");
@@ -74,9 +75,24 @@ test("consent is required to keep contact details and validation errors are show
   await expect(page.getByText(/Add an email or phone/)).toBeVisible();
 });
 
+test("name and phone are optional up front and prefill private feedback; low stars open feedback first", async ({ page }) => {
+  await page.goto("/review");
+  await page.getByLabel("Name").fill("Asha");
+  await page.getByLabel("Phone number").fill("+91 98765 43210");
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("radio", { name: /2 stars/ }).click();
+  await expect(page.getByLabel("Name (optional)")).toHaveValue("Asha");
+  await page.getByLabel(/may contact me/i).check();
+  await expect(page.getByLabel("Phone")).toHaveValue("+91 98765 43210");
+  // Google link is still present for a low rating
+  await page.getByRole("button", { name: "I'll write it myself" }).click();
+  await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toBeVisible();
+});
+
 test("AI outage falls back to the customer's own words", async ({ page }) => {
   await page.route("**/api/ai/suggest", (r) => r.fulfill({ status: 503, contentType: "application/json", body: JSON.stringify({ error: { code: "ai_unavailable", message: "x" } }) }));
   await page.goto("/review");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /5 stars/ }).click();
   await page.getByLabel("Describe your experience").fill("Lovely facial, very relaxing.");
   await page.getByRole("button", { name: "Help me write my review" }).click();
@@ -87,6 +103,7 @@ test("AI outage falls back to the customer's own words", async ({ page }) => {
 
 test("too little detail asks for more instead of inventing content", async ({ page }) => {
   await page.goto("/review");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /5 stars/ }).click();
   await page.getByLabel("Describe your experience").fill("nice");
   await page.getByRole("button", { name: "Help me write my review" }).click();
@@ -100,6 +117,7 @@ test("clipboard failure is handled gracefully", async ({ page }) => {
     document.execCommand = () => false;
   });
   await page.goto("/review");
+  await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /5 stars/ }).click();
   await page.getByRole("button", { name: "I'll write it myself" }).click();
   await page.getByLabel("Your review text").fill("Great service.");

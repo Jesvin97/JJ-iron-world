@@ -6,7 +6,7 @@ import { StarRating } from "./StarRating";
 import { FeedbackForm } from "./FeedbackForm";
 
 type PublicSettings = { businessName: string; googleReviewUrl: string | null; aiEnabled: boolean; contactEmail: string | null };
-type Step = "rate" | "describe" | "review";
+type Step = "intro" | "rate" | "describe" | "review";
 type AiState = "idle" | "loading" | "ready" | "fallback";
 
 const PROMPTS = [
@@ -35,7 +35,9 @@ function anonId(): string {
 export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; campaign: string | null }) {
   const { businessName, googleReviewUrl, aiEnabled } = settings;
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [step, setStep] = useState<Step>("rate");
+  const [step, setStep] = useState<Step>("intro");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [rating, setRating] = useState(0);
   const [text, setText] = useState("");
   const [review, setReview] = useState("");
@@ -97,7 +99,11 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
 
   function pickRating(n: number) {
     setRating(n);
-    if (step === "rate") setStep("describe");
+    if (step === "rate") {
+      setStep("describe");
+      // Lower ratings see the private feedback form first; the Google link is still shown to everyone.
+      if (n <= 3) setShowFeedback(true);
+    }
     void track("rating", { rating: n });
   }
 
@@ -162,6 +168,29 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
     }
   }
 
+  function feedbackBlock() {
+    return feedbackSent ? (
+      <p role="status" className="card text-center font-semibold text-green-800">
+        Thank you &ndash; your private feedback has been sent to our team.
+      </p>
+    ) : (
+      <FeedbackForm
+        rating={rating}
+        sessionId={sessionId}
+        campaign={campaign}
+        initialText=""
+        initialName={name}
+        initialPhone={phone}
+        contactEmail={settings.contactEmail}
+        onClose={() => setShowFeedback(false)}
+        onSent={() => {
+          setFeedbackSent(true);
+          setShowFeedback(false);
+        }}
+      />
+    );
+  }
+
   const ratingName = rating ? `${rating} out of 5 stars` : "";
 
   return (
@@ -173,12 +202,48 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
         <p className="mt-4 text-cocoa-soft">Thank you for visiting. We&rsquo;d love to hear how it went.</p>
       </header>
 
+      {step === "intro" && (
+        <form
+          method="post"
+          action="/review"
+          className="card rise"
+          aria-labelledby="intro-heading"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setStep("rate");
+          }}
+        >
+          <h2 id="intro-heading" className="font-serif text-2xl">Welcome</h2>
+          <p className="hint mt-1">
+            Optional: tell us who you are. These details stay on your device unless you choose to send private feedback, and you can skip this step.
+          </p>
+          <div className="mt-4">
+            <label className="label" htmlFor="intro-name">Name</label>
+            <input id="intro-name" className="field" maxLength={100} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div className="mt-4">
+            <label className="label" htmlFor="intro-phone">Phone number</label>
+            <input id="intro-phone" className="field" type="tel" inputMode="tel" maxLength={40} autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </div>
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <button type="submit" className="btn-primary flex-1">Continue</button>
+            <button type="button" className="btn-outline flex-1" onClick={() => { setName(""); setPhone(""); setStep("rate"); }}>Skip</button>
+          </div>
+        </form>
+      )}
+
+      {step !== "intro" && (
       <section className="card rise" aria-labelledby="rate-heading">
         <h2 id="rate-heading" className="mb-4 text-center font-serif text-2xl">
           How was your experience?
         </h2>
         <StarRating value={rating} onChange={pickRating} name="Your rating" />
       </section>
+      )}
+
+      {step !== "rate" && step !== "intro" && rating > 0 && rating <= 3 && !feedbackSent && showFeedback && (
+        <div className="mt-5">{feedbackBlock()}</div>
+      )}
 
       {step !== "rate" && (
         <section ref={describeRef} className="card rise mt-5 scroll-mt-4" aria-labelledby="describe-heading">
@@ -345,23 +410,12 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
 
       {step !== "rate" && (
         <section className="mt-5 text-center">
-          {feedbackSent ? (
-            <p role="status" className="card text-center font-semibold text-green-800">
-              Thank you &ndash; your private feedback has been sent to our team.
-            </p>
+          {feedbackSent || (showFeedback && rating <= 3) ? (
+            feedbackSent ? feedbackBlock() : (
+              <p className="hint">Prefer to also share publicly? Your Google review link is above and below &ndash; it&rsquo;s always your choice.</p>
+            )
           ) : showFeedback ? (
-            <FeedbackForm
-              rating={rating}
-              sessionId={sessionId}
-              campaign={campaign}
-              initialText=""
-              contactEmail={settings.contactEmail}
-              onClose={() => setShowFeedback(false)}
-              onSent={() => {
-                setFeedbackSent(true);
-                setShowFeedback(false);
-              }}
-            />
+            feedbackBlock()
           ) : (
             <button type="button" className="text-sm font-semibold text-gold-dark underline underline-offset-4 hover:text-cocoa" onClick={() => setShowFeedback(true)}>
               Want to tell us something privately? Send feedback to the salon
