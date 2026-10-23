@@ -56,7 +56,7 @@ export default async function FeedbackList({ searchParams }: { searchParams: Pro
               <tr key={f.id} className="border-t border-champagne/30 align-top hover:bg-ivory">
                 <td className="whitespace-nowrap p-3"><Link className="font-semibold underline" href={`/admin/feedback/${f.id}`}>{fmtDate(f.createdAt)}</Link></td>
                 <td><Stars n={f.rating} /></td>
-                <td className="max-w-md py-3 pr-3"><p className="line-clamp-2">{f.originalText}</p>{f.customerName && <p className="text-xs text-cocoa-soft">— {f.customerName}</p>}</td>
+                <td className="max-w-md py-3 pr-3"><p className="line-clamp-2">{f.originalText ?? <span className="text-cocoa-soft">No message{f.services.length ? ` · ${f.services.join(", ")}` : ""}</span>}</p>{f.customerName && <p className="text-xs text-cocoa-soft">— {f.customerName}</p>}</td>
                 <td className="pr-3">{f.campaign?.name ?? "—"}</td>
                 <td><StatusBadge status={f.status} /></td>
               </tr>

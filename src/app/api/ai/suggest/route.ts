@@ -15,7 +15,7 @@ export async function POST(req: Request) {
   if (rl) return rl;
   const body = await parseBody(req, suggestSchema, 8 * 1024);
   if ("response" in body) return body.response;
-  const { sessionId, rating, text, shorter } = body.data;
+  const { sessionId, rating, text, shorter, services } = body.data;
 
   const session = await db.reviewSession.findUnique({ where: { id: sessionId }, select: { id: true } });
   if (!session) return apiError(404, "not_found", "Session not found");
@@ -52,7 +52,7 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await suggestReview({ cfg, businessName: settings.businessName, rating, text, shorter });
+    const result = await suggestReview({ cfg, businessName: settings.businessName, rating, text, shorter, services });
     return json(result);
   } catch (err) {
     const reason = err instanceof AiUnavailableError ? err.reason : "provider_error";

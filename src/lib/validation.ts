@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SERVICES } from "./services";
 
 export const ratingSchema = z.number().int().min(1).max(5);
 
@@ -33,7 +34,25 @@ export const suggestSchema = z.object({
   rating: ratingSchema,
   text: z.string().max(1500),
   shorter: z.boolean().optional(),
+  services: z.array(z.enum(SERVICES)).max(SERVICES.length).optional(),
 });
+
+/** Visit details collected before the customer is sent to Google. Public, untrusted input. */
+export const visitSchema = z
+  .object({
+    sessionId: z.string().min(10).max(40),
+    rating: ratingSchema,
+    services: z.array(z.enum(SERVICES)).max(SERVICES.length).default([]),
+    name: optionalText(100),
+    phone: optionalText(40),
+    contactConsent: z.boolean().default(false),
+  })
+  .superRefine((v, ctx) => {
+    if (v.phone && !/^[0-9+()\-.\s]{6,40}$/.test(v.phone)) ctx.addIssue({ code: "custom", path: ["phone"], message: "Enter a valid phone number" });
+    if (v.contactConsent && !v.phone) ctx.addIssue({ code: "custom", path: ["phone"], message: "Add a phone number so we can contact you" });
+  })
+  // Name and phone are kept only with explicit consent to be contacted.
+  .transform((v) => (v.contactConsent ? v : { ...v, name: null, phone: null }));
 
 export const feedbackSchema = z
   .object({

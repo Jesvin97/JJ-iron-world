@@ -49,6 +49,8 @@ export const LIMITS = {
   event: { limit: 60, windowMs: 10 * 60_000 },
   suggest: { limit: 8, windowMs: 10 * 60_000 },
   feedback: { limit: 5, windowMs: 60 * 60_000 },
+  // Customers in the salon share one Wi-Fi IP, so this must allow many visitors.
+  visit: { limit: 60, windowMs: 10 * 60_000 },
   login: { limit: 5, windowMs: 15 * 60_000 },
   admin: { limit: 600, windowMs: 10 * 60_000 },
 } as const;

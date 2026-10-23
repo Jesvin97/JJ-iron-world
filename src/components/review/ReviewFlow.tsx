@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { copyText } from "@/lib/clipboard";
+import { SERVICES } from "@/lib/services";
 import { StarRating } from "./StarRating";
 import { FeedbackForm } from "./FeedbackForm";
 
@@ -45,6 +46,11 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
   const [aiState, setAiState] = useState<AiState>("idle");
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [copy, setCopy] = useState<"idle" | "copied" | "failed">("idle");
+  const [services, setServices] = useState<string[]>([]);
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [consent, setConsent] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedbackSent, setFeedbackSent] = useState(false);
   const describeRef = useRef<HTMLDivElement>(null);
@@ -122,7 +128,7 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
       const res = await fetch("/api/ai/suggest", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ sessionId: id, rating, text, shorter }),
+        body: JSON.stringify({ sessionId: id, rating, text, shorter, services }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.status === "needs_more_detail") {
@@ -156,14 +162,30 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
     setStep("review");
   }
 
-  async function doCopy() {
+  async function copyAndContinue(url: string) {
+    if (!review.trim()) return;
+    setContactError(null);
+    if (consent && !phone.trim()) {
+      setContactError("Add a phone number, or untick the follow-up box.");
+      setStep("describe");
+      return;
+    }
     const result = await copyText(review);
     setCopy(result);
+    if (result === "failed") reviewBox.current?.select();
     void track("copy");
-    if (result === "failed") {
-      reviewBox.current?.focus();
-      reviewBox.current?.select();
+    void track("google_click");
+    const id = sessionId ?? (await ensureSession());
+    if (id && rating) {
+      void fetch("/api/visits", {
+        method: "POST",
+        keepalive: true,
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ sessionId: id, rating, services, name: name || undefined, phone: phone || undefined, contactConsent: consent }),
+      }).catch(() => undefined);
     }
+    // The copy is attempted first; the customer then pastes into Google and presses Post themselves.
+    window.open(url, "_blank", "noopener,noreferrer");
   }
 
   function feedbackBlock() {
@@ -266,6 +288,41 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
             <span aria-hidden="true">{text.length}/1500</span>
           </div>
 
+          <fieldset className="mt-4">
+            <legend className="label">Which services did you have? <span className="font-normal text-cocoa-soft">(optional)</span></legend>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {SERVICES.map((svc) => {
+                const on = services.includes(svc);
+                return (
+                  <button
+                    key={svc}
+                    type="button"
+                    aria-pressed={on}
+                    className={`rounded-full border px-3 py-2 text-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold-dark ${on ? "border-gold-dark bg-gold-dark text-ivory" : "border-champagne bg-ivory text-cocoa hover:bg-sand"}`}
+                    onClick={() => setServices((xs) => (on ? xs.filter((x) => x !== svc) : [...xs, svc]))}
+                  >
+                    {svc}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          <fieldset className="mt-4 rounded-xl border border-champagne/60 p-4">
+            <legend className="px-1 text-sm font-semibold">Want us to follow up? (optional)</legend>
+            <label className="flex items-start gap-3 text-sm">
+              <input type="checkbox" className="mt-1 h-5 w-5 accent-[#8a6a35]" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
+              <span>Yes, the salon may contact me about my visit. My name and phone are used only for that.</span>
+            </label>
+            {consent && (
+              <div className="mt-3 grid gap-3">
+                <div><label className="label" htmlFor="visit-name">Name</label><input id="visit-name" className="field" maxLength={100} autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} /></div>
+                <div><label className="label" htmlFor="visit-phone">Phone</label><input id="visit-phone" type="tel" inputMode="tel" className="field" maxLength={40} autoComplete="tel" value={phone} onChange={(e) => setPhone(e.target.value)} aria-invalid={!!contactError} />
+                  {contactError && <p role="alert" className="mt-1 text-sm text-red-800">{contactError}</p>}</div>
+              </div>
+            )}
+          </fieldset>
+
           <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Writing prompts">
             {PROMPTS.map((p) => (
               <button
@@ -358,19 +415,20 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
             </div>
           )}
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <button type="button" className="btn-primary" onClick={doCopy} disabled={!review.trim()}>
-              {copy === "copied" ? "Copied ✓" : "Copy review"}
-            </button>
+          <div className="mt-6">
             {googleReviewUrl ? (
               <a
-                className="btn-gold"
+                className="btn-gold w-full"
                 href={googleReviewUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                onClick={() => void track("google_click")}
+                aria-disabled={!review.trim()}
+                onClick={(e) => {
+                  e.preventDefault();
+                  void copyAndContinue(googleReviewUrl);
+                }}
               >
-                Continue to Google Reviews
+                Copy my review &amp; continue to Google
                 <span aria-hidden="true">↗</span>
                 <span className="sr-only">(opens in a new tab)</span>
               </a>
