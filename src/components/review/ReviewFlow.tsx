@@ -101,8 +101,6 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
     setRating(n);
     if (step === "rate") {
       setStep("describe");
-      // Lower ratings see the private feedback form first; the Google link is still shown to everyone.
-      if (n <= 3) setShowFeedback(true);
     }
     void track("rating", { rating: n });
   }
@@ -241,9 +239,6 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
       </section>
       )}
 
-      {step !== "rate" && step !== "intro" && rating > 0 && rating <= 3 && !feedbackSent && showFeedback && (
-        <div className="mt-5">{feedbackBlock()}</div>
-      )}
 
       {step !== "rate" && (
         <section ref={describeRef} className="card rise mt-5 scroll-mt-4" aria-labelledby="describe-heading">
@@ -408,12 +403,24 @@ export function ReviewFlow({ settings, campaign }: { settings: PublicSettings; c
         </section>
       )}
 
+      {step !== "rate" && rating > 0 && rating <= 3 && !feedbackSent && !showFeedback && (
+        <section className="card rise mt-5 text-center" aria-labelledby="sorry-heading">
+          <h2 id="sorry-heading" className="font-serif text-2xl">
+            We&rsquo;re sorry it wasn&rsquo;t perfect
+          </h2>
+          <p className="hint mt-1">
+            If you&rsquo;d like us to put things right, tell the team directly. Your Google review stays available to you either way.
+          </p>
+          <button type="button" className="btn-outline mt-4" onClick={() => setShowFeedback(true)}>
+            Tell the salon privately
+          </button>
+        </section>
+      )}
+
       {step !== "rate" && (
         <section className="mt-5 text-center">
-          {feedbackSent || (showFeedback && rating <= 3) ? (
-            feedbackSent ? feedbackBlock() : (
-              <p className="hint">Prefer to also share publicly? Your Google review link is above and below &ndash; it&rsquo;s always your choice.</p>
-            )
+          {feedbackSent ? (
+            feedbackBlock()
           ) : showFeedback ? (
             feedbackBlock()
           ) : (

@@ -55,6 +55,9 @@ test("a 1-star customer gets the same Google link and can also send private feed
   await page.getByRole("button", { name: "I'll write it myself" }).click();
   await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toHaveAttribute("href", GOOGLE_URL);
 
+  // Low ratings get a prominent private-feedback prompt, in addition to (never instead of) the Google link.
+  await expect(page.getByRole("heading", { name: /sorry it wasn/i })).toBeVisible();
+  await page.getByRole("button", { name: "Tell the salon privately" }).click();
   await page.getByLabel("Your feedback").fill("The appointment started 30 minutes late.");
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText(/private feedback has been sent/i)).toBeVisible();
@@ -66,7 +69,7 @@ test("consent is required to keep contact details and validation errors are show
   await page.goto("/review");
   await page.getByRole("button", { name: "Skip" }).click();
   await page.getByRole("radio", { name: /3 stars/ }).click();
-  await page.getByRole("button", { name: "I'll write it myself" }).click();
+  await page.getByRole("button", { name: "Tell the salon privately" }).click();
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText("Please write a short message")).toBeVisible();
   await page.getByLabel("Your feedback").fill("Average visit overall.");
@@ -75,12 +78,13 @@ test("consent is required to keep contact details and validation errors are show
   await expect(page.getByText(/Add an email or phone/)).toBeVisible();
 });
 
-test("name and phone are optional up front and prefill private feedback; low stars open feedback first", async ({ page }) => {
+test("name and phone are optional up front and prefill private feedback", async ({ page }) => {
   await page.goto("/review");
   await page.getByLabel("Name").fill("Asha");
   await page.getByLabel("Phone number").fill("+91 98765 43210");
   await page.getByRole("button", { name: "Continue" }).click();
   await page.getByRole("radio", { name: /2 stars/ }).click();
+  await page.getByRole("button", { name: "Tell the salon privately" }).click();
   await expect(page.getByLabel("Name (optional)")).toHaveValue("Asha");
   await page.getByLabel(/may contact me/i).check();
   await expect(page.getByLabel("Phone")).toHaveValue("+91 98765 43210");
