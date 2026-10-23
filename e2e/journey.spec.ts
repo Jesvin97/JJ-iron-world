@@ -53,7 +53,9 @@ test("a 1-star customer gets the same Google link and can also send private feed
   await page.getByRole("button", { name: "I'll write it myself" }).click();
   await expect(page.getByRole("link", { name: /Continue to Google Reviews/ })).toHaveAttribute("href", GOOGLE_URL);
 
-  await page.getByRole("button", { name: /send feedback to the salon/i }).click();
+  // Low ratings get a prominent private-feedback prompt, in addition to (never instead of) the Google link.
+  await expect(page.getByRole("heading", { name: /sorry it wasn/i })).toBeVisible();
+  await page.getByRole("button", { name: "Tell the salon privately" }).click();
   await page.getByLabel("Your feedback").fill("The appointment started 30 minutes late.");
   await page.getByRole("button", { name: "Send private feedback" }).click();
   await expect(page.getByText(/private feedback has been sent/i)).toBeVisible();

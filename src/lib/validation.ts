@@ -114,3 +114,36 @@ export const campaignUpdateSchema = z.object({
 });
 
 export type FeedbackFilter = z.infer<typeof feedbackFilterSchema>;
+
+export const PUBLIC_REVIEW_STATUSES = ["NEW", "REPLY_DRAFTED", "REPLIED", "SUSPECTED_FAKE", "REPORTED", "REMOVED", "KEPT"] as const;
+
+const nullableText = (max: number) =>
+  clean(max)
+    .nullable()
+    .optional()
+    .transform((v) => (v === undefined ? undefined : v ? v : null));
+
+export const publicReviewCreateSchema = z.object({
+  reviewerName: nullableText(100),
+  rating: ratingSchema,
+  reviewText: nullableText(4000),
+  postedAt: z.coerce.date().refine((d) => d.getTime() <= Date.now() + 24 * 3600 * 1000, "Date can't be in the future"),
+  assignee: nullableText(60),
+});
+
+export const publicReviewUpdateSchema = z
+  .object({
+    status: z.enum(PUBLIC_REVIEW_STATUSES).optional(),
+    flagReason: nullableText(500),
+    replyText: nullableText(4000),
+    assignee: nullableText(60),
+    internalNotes: nullableText(4000),
+  })
+  .refine((v) => Object.values(v).some((x) => x !== undefined), "Nothing to update");
+
+export const publicReviewFilterSchema = z.object({
+  status: z.enum(PUBLIC_REVIEW_STATUSES).optional(),
+  maxRating: z.coerce.number().int().min(1).max(5).optional(),
+  page: z.coerce.number().int().min(1).max(10000).default(1),
+});
+export type PublicReviewFilter = z.infer<typeof publicReviewFilterSchema>;
