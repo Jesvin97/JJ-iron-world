@@ -1,0 +1,98 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWED
+  RESOLVED
+}
+
+enum AdminRole {
+  ADMIN  // full access
+  VIEWER // read-only
+}
+
+/// Single-row table (id is always "singleton") holding editable salon configuration.
+model SalonSettings {
+  id                     String   @id @default("singleton")
+  businessName           String
+  googleReviewUrl        String?
+  aiEnabled              Boolean  @default(true)
+  aiProvider             String   @default("anthropic")
+  aiModel                String   @default("claude-haiku-5-5")
+  notificationWebhookUrl String?
+  contactEmail           String? // shown in the privacy notice
+  feedbackRetentionDays  Int      @default(365)
+  analyticsRetentionDays Int      @default(180)
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+}
+
+model Campaign {
+  id        String   @id @default(cuid())
+  /// URL-safe identifier used in the QR link: /review?c=<slug>
+  slug      String   @unique
+  name      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  sessions ReviewSession[]
+  feedback FeedbackSubmission[]
+}
+
+model FeedbackSubmission {
+  id             String         @id @default(cuid())
+  rating         Int
+  /// The customer's own words (private feedback message)
+  originalText   String?
+  /// Reserved: AI suggestion text. Not collected by the public private-feedback form in the MVP.
+  generatedText  String?
+  /// Reserved: customer-edited review text. Not collected by the public form in the MVP.
+  editedText     String?
+  customerName   String?
+  customerEmail  String?
+  customerPhone  String?
+  contactConsent Boolean        @default(false)
+  status         FeedbackStatus @default(NEW)
+  internalNotes  String?
+  campaignId     String?
+  campaign       Campaign?      @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([createdAt])
+  @@index([status, createdAt])
+  @@index([rating])
+  @@index([campaignId])
+}
+
+model ReviewSession {
+  id                 String    @id @default(cuid())
+  /// Random per-tab identifier generated in the browser (sessionStorage). Not linked to a person.
+  anonymousSessionId String
+  campaignId         String?
+  campaign           Campaign? @relation(fields: [campaignId], references: [id], onDelete: SetNull)
+  rating             Int?
+  aiGenerationCount  Int       @default(0)
+  reviewCopied       Boolean   @default(false)
+  googleLinkClicked  Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+
+  @@index([createdAt])
+  @@index([anonymousSessionId, createdAt])
+  @@index([campaignId, createdAt])
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         AdminRole @default(ADMIN)
+  createdAt    DateTime  @default(now())
+}
